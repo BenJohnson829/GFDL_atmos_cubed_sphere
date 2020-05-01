@@ -684,6 +684,12 @@ contains
 !--------------------
        idiag%id_pv = register_diag_field ( trim(field), 'pv', axes(1:3), Time,       &
             'potential vorticity', '1/s', missing_value=missing_value )
+! Added PV350 - Gan Zhang
+       idiag%id_pv350K = register_diag_field ( trim(field), 'pv350K', axes(1:2), Time,       &
+                           '350-K potential vorticity; needs x350 scaling', '(K m**2) / (kg s)', missing_value=missing_value)
+! Added PV550 
+       idiag%id_pv550K = register_diag_field ( trim(field), 'pv550K', axes(1:2), Time,       &
+                           '550-K potential vorticity; needs x550 scaling', '(K m**2) / (kg s)', missing_value=missing_value)
 
 !--------------------------
 ! Extra surface diagnistics:
@@ -1233,8 +1239,8 @@ contains
        endif
 
        if ( idiag%id_vort200>0 .or. idiag%id_vort500>0 .or. idiag%id_vort850>0 .or. idiag%id_vorts>0   &
-            .or. idiag%id_vort>0 .or. idiag%id_pv>0 .or. idiag%id_rh>0 .or. idiag%id_x850>0 .or.  &
-            idiag%id_uh03>0 .or. idiag%id_uh25>0) then
+            .or. idiag%id_vort>0 .or. idiag%id_pv>0 .or. idiag%id_pv350K>0 .or. idiag%id_pv550K>0 &
+            .or. idiag%id_rh>0 .or. idiag%id_x850>0 .or. idiag%id_uh03>0 .or. idiag%id_uh25>0) then
           call get_vorticity(isc, iec, jsc, jec, isd, ied, jsd, jed, npz, Atm(n)%u, Atm(n)%v, wk, &
                Atm(n)%gridstruct%dx, Atm(n)%gridstruct%dy, Atm(n)%gridstruct%rarea)
 
@@ -1310,12 +1316,37 @@ contains
           endif
 
 
-          if ( idiag%id_pv > 0 ) then
+          ! Added PV350 - Gan Zhang (Gan.Zhang@noaa.gov)
+          if ( idiag%id_pv > 0 .or. idiag%id_pv350K >0 .or. idiag%id_pv550K >0) then
+            allocate ( a3(isc:iec,jsc:jec,npz+1) )
+            ! Modified pv_entropy to get potential temperature at layer interfaces (last variable)
+            ! The values are needed for interpolate_z
 ! Note: this is expensive computation.
-              call pv_entropy(isc, iec, jsc, jec, ngc, npz, wk,    &
-                              Atm(n)%gridstruct%f0, Atm(n)%pt, Atm(n)%pkz, Atm(n)%delp, grav)
+            call pv_entropy(isc, iec, jsc, jec, ngc, npz, wk,    &
+                            Atm(n)%gridstruct%f0, Atm(n)%pt, Atm(n)%pkz, Atm(n)%delp, grav, a3)
+            if ( idiag%id_pv > 0 ) then
               used = send_data ( idiag%id_pv, wk, Time )
               if (prt_minmax) call prt_maxmin('PV', wk, isc, iec, jsc, jec, 0, 1, 1.)
+            endif
+	    if( idiag%id_pv350K > 0 .or. idiag%id_pv550K >0 ) then
+              !"pot temp" from pv_entropy is only semi-finished; needs p0^kappa (pk0)
+              do k=1,npz+1
+                 do j=jsc,jec
+                    do i=isc,iec
+                       a3(i,j,k) = a3(i,j,k) * pk0  
+                    enddo
+                 enddo
+              enddo
+              !wk as input, which stores pv from pv_entropy;
+              !use z interpolation, both potential temp and z increase monotonically with height
+              !interpolate_vertical will apply log operation to 350, and also assumes a different vertical order
+	      call interpolate_z(isc, iec, jsc, jec, npz, 350., a3, wk, a2)
+	      used = send_data( idiag%id_pv350K, a2, Time)
+              !interpolate_vertical will apply log operation to 350, and also assumes a different vertical order
+	      call interpolate_z(isc, iec, jsc, jec, npz, 550., a3, wk, a2)
+	      used = send_data( idiag%id_pv550K, a2, Time)
+	    endif
+            deallocate ( a3 )
           endif
 
        endif
@@ -3791,7 +3822,7 @@ contains
 
 
 
- subroutine pv_entropy(is, ie, js, je, ng, km, vort, f_d, pt, pkz, delp, grav)
+ subroutine pv_entropy(is, ie, js, je, ng, km, vort, f_d, pt, pkz, delp, grav, te)
 
 ! !INPUT PARAMETERS:
    integer, intent(in)::  is, ie, js, je, ng, km
@@ -3803,6 +3834,8 @@ contains
 
 ! vort is relative vorticity as input. Becomes PV on output
       real, intent(inout):: vort(is:ie,js:je,km)
+! output potential temperature at the interface so it can be used for diagnostics
+   real, intent(out):: te(is:ie,js:je,km+1) 
 
 ! !DESCRIPTION:
 !        EPV = 1/r * (vort+f_d) * d(S)/dz; where S is a conservative scalar
@@ -3813,7 +3846,7 @@ contains
 ! z-surface is not that different from the hybrid sigma-p coordinate.
 ! See page 39, Pedlosky 1979: Geophysical Fluid Dynamics
 !
-! The follwoing simplified form is strictly correct only if vort is computed on 
+! The following simplified form is strictly correct only if vort is computed on 
 ! constant z surfaces. In addition hydrostatic approximation is made.
 !        EPV = - GRAV * (vort+f_d) / del(p) * del(pt) / pt 
 ! where del() is the vertical difference operator.
@@ -3824,7 +3857,7 @@ contains
 !---------------------------------------------------------------------
 !BOC
       real w3d(is:ie,js:je,km)
-      real te(is:ie,js:je,km+1), t2(is:ie,km), delp2(is:ie,km)
+      real t2(is:ie,km), delp2(is:ie,km)
       real te2(is:ie,km+1)
       integer i, j, k
 

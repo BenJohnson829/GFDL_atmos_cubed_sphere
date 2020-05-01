@@ -62,6 +62,8 @@ module fv_arrays_mod
            id_uu, id_uv, id_uw, id_vv, id_vw, id_ww,      & ! momentum flux
            id_iuu, id_iuv, id_iuw, id_ivv, id_ivw, id_iww   ! vertically integral of momentum flux
 
+! Selected theta-level fields from 3D variables:
+ integer :: id_pv350K, id_pv550K
 
 ! Selected p-level fields from 3D variables:
  integer :: id_vort200, id_vort500, id_w500, id_w700
