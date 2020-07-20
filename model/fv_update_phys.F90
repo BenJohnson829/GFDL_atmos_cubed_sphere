@@ -26,7 +26,7 @@ module fv_update_phys_mod
   use mpp_parameter_mod,  only: AGRID_PARAM=>AGRID
   use mpp_mod,            only: FATAL, mpp_error
   use mpp_mod,            only: mpp_error, NOTE, WARNING, mpp_pe
-  use time_manager_mod,   only: time_type
+  use time_manager_mod,   only: time_type, get_time, get_date, set_date
   use tracer_manager_mod, only: get_tracer_index, adjust_mass, get_tracer_names
   use fv_mp_mod,          only: start_group_halo_update, complete_group_halo_update
   use fv_mp_mod,          only: group_halo_update_type
@@ -42,7 +42,7 @@ module fv_update_phys_mod
 #elif defined (CLIMATE_NUDGE)
   use fv_climate_nudge_mod, only: fv_climate_nudge, do_ps
 #elif defined (ADA_NUDGE)
-  use fv_ada_nudge_mod,   only: fv_ada_nudge
+  use fv_ada_nudge_mod,   only: fv_ada_nudge, ps_ass_int
 #else
   use fv_nwp_nudge_mod,   only: fv_nwp_nudge
 #endif
@@ -147,6 +147,8 @@ module fv_update_phys_mod
     integer  w_diff                             ! w-tracer for PBL diffusion
     real:: qstar, dbk, rdg, zvir, p_fac, cv_air, gama_dt, tbad
     logical :: bad_range
+
+    integer :: seconds, days   !x1y for ADA
 
 !f1p
 !account for change in air molecular weight because of H2O change
@@ -486,7 +488,10 @@ module fv_update_phys_mod
             enddo
         endif
 #elif defined (ADA_NUDGE)
-! All fields will be updated except winds; wind tendencies added
+! All fields will be updated ; tendencies added
+! x1y add the call for each data assimilation frequency
+    call get_time (Time, seconds, days)
+    if (mod(seconds, ps_ass_int) == 0) then
 !$omp parallel do default(shared)
         do j=js,je
          do k=2,npz+1
@@ -498,9 +503,13 @@ module fv_update_phys_mod
            ps(i,j) = pe(i,npz+1,j)
          enddo
         enddo
+!        call fv_ada_nudge ( Time, dt, npx, npy, npz,  ps_dt, u_dt, v_dt, t_dt, q_dt_nudge,   &
+!                            zvir, ptop, ak, bk, ts, ps, delp, ua, va, pt,    &
+!                            nwat, q,  phis, gridstruct, bd, domain )
         call fv_ada_nudge ( Time, dt, npx, npy, npz,  ps_dt, u_dt, v_dt, t_dt, q_dt_nudge,   &
-                            zvir, ptop, ak, bk, ts, ps, delp, ua, va, pt,    &
+                            zvir, ptop, ak, bk,  ps, delp, ua, va, pt,    &
                             nwat, q,  phis, gridstruct, bd, domain )
+    endif
 #else
 ! All fields will be updated except winds; wind tendencies added
 !$OMP parallel do default(none) shared(is,ie,js,je,npz,pe,delp,ps)

@@ -38,7 +38,7 @@ module dyn_core_mod
   use fv_update_phys_mod, only: update_dwinds_phys
 #endif
 #if defined (ADA_NUDGE)
-  use fv_ada_nudge_mod,   only: breed_slp_inline_ada
+!  use fv_ada_nudge_mod,   only: breed_slp_inline_ada
 #else
   use fv_nwp_nudge_mod,   only: breed_slp_inline, do_adiabatic_init
 #endif
@@ -1045,8 +1045,8 @@ contains
            enddo
         endif
 #if defined (ADA_NUDGE)
-         call breed_slp_inline_ada( it, dt, npz, ak, bk, phis, pe, pk, peln, pkz,     &
-                                delp, u, v, pt, q, flagstruct%nwat, zvir, gridstruct, ks, domain, bd )
+!         call breed_slp_inline_ada( it, dt, npz, ak, bk, phis, pe, pk, peln, pkz,     &
+!                                delp, u, v, pt, q, flagstruct%nwat, zvir, gridstruct, ks, domain, bd )
 #else
          call breed_slp_inline( it, dt, npz, ak, bk, phis, pe, pk, peln, pkz, delp, u, v, pt, q,    &
                                 flagstruct%nwat, zvir, gridstruct, ks, domain, bd, hydrostatic )
