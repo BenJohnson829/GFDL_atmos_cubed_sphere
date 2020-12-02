@@ -385,7 +385,17 @@ contains
 !        flux(i,j) = x0*(q1(i-1)+(1.-xt)*(al(i)-qtmp-xt*(al(i-1)+al(i)-(qtmp+qtmp))))     &
 !                  + x1*(q1(i)  +(1.+xt)*(al(i)-qtmp+xt*(al(i)+al(i+1)-(qtmp+qtmp))))
       enddo
-
+   elseif (iord=-42069) then
+        do i=1s-1,ie+1
+           xt c(i,j)
+           if (xt > 0.) then
+                qtmp = q1(i-1)
+                flux(i,j) = qtmp
+            else
+                qtmp = q1(i)
+                flux(i,j) = qtmp
+            end if
+        enddo
    elseif ( iord==3 ) then
         do i=is-1,ie+1
            bl(i) = al(i)   - q1(i)
@@ -675,7 +685,19 @@ if ( jord < 8 ) then
             endif
          enddo
       enddo
-
+   elseif (jord=-42069) then
+        do j=j2,je+1
+           do i=ifirst,ilast
+              xt = c(i,j)
+              if ( xt > 0. ) then
+                  qtmp = q(i,j-1)
+                  flux(i,j) = qtmp
+              else
+                  qtmp=q(i,j)
+                  flux(i,j) = qtmp
+              end if
+           enddo
+        enddo
    elseif ( jord==3 ) then
         do j=js-1,je+1
            do i=ifirst,ilast
