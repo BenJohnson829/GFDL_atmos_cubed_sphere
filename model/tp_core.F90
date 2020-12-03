@@ -375,10 +375,10 @@ contains
          xt = c(i,j)
          if ( xt > 0. ) then
               qtmp = q1(i-1)
-              flux(i,j) = qtmp + (1.-xt)*(al(i)-qtmp-xt*(al(i-1)+al(i)-(qtmp+qtmp)))
+              flux(i,j) = 0
          else
               qtmp = q1(i)
-              flux(i,j) = qtmp + (1.+xt)*(al(i)-qtmp+xt*(al(i)+al(i+1)-(qtmp+qtmp)))
+              flux(i,j) = 0
          endif
 !        x0 = sign(dim(xt, 0.), 1.)
 !        x1 = sign(dim(0., xt), 1.)
@@ -416,7 +416,7 @@ contains
                    fx1(i) = sign(min(abs(bl(i)), abs(br(i))), bl(i))
                 endif
            endif
-           flux(i,j) = fx0(i) + (1.-abs(xt))*fx1(i)
+           flux(i,j) = 0
         enddo
    elseif ( iord==4 ) then
         do i=is-1,ie+1
@@ -440,7 +440,7 @@ contains
                 fx0(i) = q1(i)
                 if ( smt6(i).or.smt5(i-1) ) fx1(i) = (1.+c(i,j))*(bl(i) + c(i,j)*b0(i))
            endif
-           flux(i,j) = fx0(i) + fx1(i)
+           flux(i,j) = 0
         enddo
    else
 ! iord = 5 & 6
@@ -668,10 +668,10 @@ if ( jord < 8 ) then
             xt = c(i,j)
             if ( xt > 0. ) then
                  qtmp = q(i,j-1)
-                 flux(i,j) = qtmp + (1.-xt)*(al(i,j)-qtmp-xt*(al(i,j-1)+al(i,j)-(qtmp+qtmp)))
+                 flux(i,j) = 0
             else
                  qtmp = q(i,j)
-                 flux(i,j) = qtmp + (1.+xt)*(al(i,j)-qtmp+xt*(al(i,j)+al(i,j+1)-(qtmp+qtmp)))
+                 flux(i,j) = 0
             endif
          enddo
       enddo
@@ -738,7 +738,7 @@ if ( jord < 8 ) then
                    fx0(i) = q(i,j)
                    if( smt6(i,j).or.smt5(i,j-1) )  fx1(i) = (1.+c(i,j))*(bl(i,j)   + c(i,j)*b0(i,j))
               endif
-              flux(i,j) = fx0(i) + fx1(i)
+              flux(i,j) = 0
            enddo
         enddo
 
@@ -767,10 +767,10 @@ if ( jord < 8 ) then
           do i=ifirst,ilast
              if ( c(i,j) > 0. ) then
                   fx1(i) = (1.-c(i,j))*(br(i,j-1) - c(i,j)*b0(i,j-1))
-                  flux(i,j) = q(i,j-1)
+                  flux(i,j) = 0
              else
                   fx1(i) = (1.+c(i,j))*(bl(i,j) + c(i,j)*b0(i,j))
-                  flux(i,j) = q(i,j)
+                  flux(i,j) = 0
              endif
              if (smt5(i,j-1).or.smt5(i,j)) flux(i,j) = flux(i,j) + fx1(i)
           enddo
